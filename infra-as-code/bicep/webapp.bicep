@@ -1,5 +1,5 @@
 /*
-  Deploy a web app with a managed identity, diagnostic, and a private endpoint
+  Deploy a web app with a managed identity, diagnostic settings, and (optionally) a private endpoint.
 */
 
 @description('This is the base name for each Azure resource name (6-12 chars)')
@@ -8,13 +8,13 @@ param baseName string
 @description('The resource group location')
 param location string = resourceGroup().location
 
-// existing resource name params 
+// Existing resource name parameters 
 param logWorkspaceName string
 
 @secure()
 param sqlConnectionString string
 
-// variables
+// Variables
 var appName = 'app-${baseName}'
 var appServicePlanName = 'asp-${appName}${uniqueString(subscription().subscriptionId)}'
 var appServiceManagedIdentityName = 'id-${appName}'
@@ -27,13 +27,12 @@ var appServicePlanSettings = {
   }
 }
 
-
 // ---- Existing resources ----
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: logWorkspaceName
 }
 
-// ---- Web App resources ----
+// ---- Web App Resources ----
 
 // Managed Identity for App Service
 resource appServiceManagedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
@@ -41,7 +40,7 @@ resource appServiceManagedIdentity 'Microsoft.ManagedIdentity/userAssignedIdenti
   location: location
 }
 
-//App service plan
+// App Service Plan
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: appServicePlanName
   location: location
@@ -77,7 +76,7 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
   }
 }
 
-// App Settings
+// App Settings for Web App
 resource appsettings 'Microsoft.Web/sites/config@2022-09-01' = {
   name: 'appsettings'
   parent: webApp
@@ -86,7 +85,7 @@ resource appsettings 'Microsoft.Web/sites/config@2022-09-01' = {
   }
 }
 
-// App service plan diagnostic settings
+// App Service Plan Diagnostic Settings
 resource appServicePlanDiagSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: '${appServicePlan.name}-diagnosticSettings'
   scope: appServicePlan
@@ -96,16 +95,12 @@ resource appServicePlanDiagSettings 'Microsoft.Insights/diagnosticSettings@2021-
       {
         category: 'AllMetrics'
         enabled: true
-        retentionPolicy: {
-          days: 7
-          enabled: true
-        }
       }
     ]
   }
 }
 
-//Web App diagnostic settings
+// Web App Diagnostic Settings
 resource webAppDiagSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: '${webApp.name}-diagnosticSettings'
   scope: webApp
@@ -116,42 +111,28 @@ resource webAppDiagSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
         category: 'AppServiceHTTPLogs'
         categoryGroup: null
         enabled: true
-        retentionPolicy: {
-          days: 7
-          enabled: true
-        }
       }
       {
         category: 'AppServiceConsoleLogs'
         categoryGroup: null
         enabled: true
-        retentionPolicy: {
-          days: 7
-          enabled: true
-        }
       }
       {
         category: 'AppServiceAppLogs'
         categoryGroup: null
         enabled: true
-        retentionPolicy: {
-          days: 7
-          enabled: true
-        }
       }
     ]
     metrics: [
       {
         category: 'AllMetrics'
         enabled: true
-        retentionPolicy: {
-          days: 7
-          enabled: true
-        }
       }
     ]
   }
 }
+
+// ---- Outputs ----
 
 @description('The name of the app service plan.')
 output appServicePlanName string = appServicePlan.name
@@ -165,5 +146,5 @@ output appServiceIdentity string = appServiceManagedIdentity.properties.clientId
 @description('User identity subscription id.')
 output appServiceIdentitySubscriptionId string = subscription().subscriptionId
 
-@description('WebApp resource id.')
+@description('Web App resource id.')
 output appServiceResourceId string = webApp.id

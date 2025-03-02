@@ -3,13 +3,13 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "baseName": {
-      "value": ""
+      "value": "mikesqldb"
     },
     "sqlAdministratorLogin": {
-      "value": ""
+      "value": "michael"
     },
     "sqlAdministratorLoginPassword": {
-      "value": "!"
+      "value": "Mike2011"
     }
   }
 }

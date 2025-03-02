@@ -29,7 +29,7 @@ This step creates the environment where your web app will run.
 3️⃣ **Log in to Azure** and select your account (if needed):  
    ```bash
    az login 
-   az account set --subscription xxxxx
+   az account set --subscription 3b80f884xxxxxxxxxx
    ```
    👉 This step connects your computer to your Azure account.  
 
@@ -39,17 +39,21 @@ This step creates the environment where your web app will run.
    - The password must meet security rules (e.g., uppercase, lowercase, numbers).  
 
 5️⃣ **Run these commands to set up the cloud environment:**  
-   ```bash
-   LOCATION=westus3
-   BASE_NAME=<your-base-name>   # Choose a short, unique name
-   RESOURCE_GROUP=<your-group-name>  # Choose a name for your resource group
+   ```Powershell
+$LOCATION = "ukwest"           # or "UK West" if the region name requires a space (enclose in quotes)
+$BASE_NAME = "mikewebapp"       # a short, unique name
+$RESOURCE_GROUP = "mikeresourcegp"  # name for your resource group
 
-   az group create --location $LOCATION --resource-group $RESOURCE_GROUP
+az group create --location $LOCATION --resource-group $RESOURCE_GROUP
 
-   az deployment group create --template-file ./infra-as-code/bicep/main.bicep \
-     --resource-group $RESOURCE_GROUP \
-     --parameters @./infra-as-code/bicep/parameters.json \
-     --parameters baseName=$BASE_NAME
+  $RESOURCE_GROUP = "mikeresourcegp"
+$BASE_NAME = "mikewebapp"
+
+az deployment group create --template-file "./infra-as-code/bicep/main.bicep" `
+     --resource-group $RESOURCE_GROUP `
+     --parameters "@./infra-as-code/bicep/parameters.json" `
+     --parameters "baseName=$BASE_NAME"
+
    ```
    👉 This creates all the necessary components in **Azure**, like the database and web hosting environment.
 
@@ -59,9 +63,22 @@ This step creates the environment where your web app will run.
 Now that the environment is ready, let's put the website online.  
 
 1️⃣ Run the following command:  
-   ```bash
-   APPSERVICE_NAME=app-$BASE_NAME
-   az webapp deploy --resource-group $RESOURCE_GROUP --name $APPSERVICE_NAME --type zip --src-url https://raw.githubusercontent.com/Azure-Samples/app-service-sample-workload/main/website/SimpleWebApp.zip
+   ```Powershell 
+
+$LOCATION = "ukwest"                # or "UK West" if the region name requires a space (enclose in quotes)
+$BASE_NAME = "mikewebapp"           # a short, unique name
+$RESOURCE_GROUP = "mikeresourcegp"  # name for your resource group
+
+az group create --location $LOCATION --resource-group $RESOURCE_GROUP
+
+$APPSERVICE_NAME = "app-$BASE_NAME"
+
+az webapp deploy --resource-group $RESOURCE_GROUP `
+                 --name $APPSERVICE_NAME `
+                 --type zip `
+                 --src-url "https://raw.githubusercontent.com/Azure-Samples/app-service-sample-workload/main/website/SimpleWebApp.zip"
+
+
    ```
    👉 This uploads a sample website from GitHub to **Azure App Services**.  
 
@@ -71,9 +88,10 @@ Now that the environment is ready, let's put the website online.
 Now, check if your website is working.  
 
 1️⃣ Run this command:  
-   ```bash
-   APPSERVICE_URL=https://$APPSERVICE_NAME.azurewebsites.net
-   echo $APPSERVICE_URL
+   ```Powershell
+$APPSERVICE_URL = "https://$APPSERVICE_NAME.azurewebsites.net"
+echo $APPSERVICE_URL
+
    ```  
 2️⃣ Open the link in your web browser to see your web app live! 🎉  
 
@@ -85,24 +103,67 @@ Right now, your web app connects to the database using a **connection string** (
 ### How to do it:
 1️⃣ Open **Azure Cloud Shell** (a terminal inside Azure).  
 2️⃣ Run these commands to configure a secure connection:  
-   ```bash
-   LOCATION=westus3
-   BASE_NAME=<your-base-name>
-   RESOURCE_GROUP=<your-group-name>
-   APPSERVICE_NAME=app-$BASE_NAME
-   RESOURCEID_DATABASE=$(az deployment group show -g $RESOURCE_GROUP -n databaseDeploy --query properties.outputs.databaseResourceId.value -o tsv)
-   RESOURCEID_WEBAPP=$(az deployment group show -g $RESOURCE_GROUP -n webappDeploy --query properties.outputs.appServiceResourceId.value -o tsv)
-   USER_IDENTITY_WEBAPP_CLIENTID=$(az deployment group show -g $RESOURCE_GROUP -n webappDeploy --query properties.outputs.appServiceIdentity.value -o tsv)
-   USER_IDENTITY_WEBAPP_SUBSCRIPTION=$(az deployment group show -g $RESOURCE_GROUP -n webappDeploy --query properties.outputs.appServiceIdentitySubscriptionId.value -o tsv)
+   ```PowerShell
+   # Enable strict mode and halt on any errors
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
-   # Delete the old connection string (optional)
-   az webapp config appsettings delete --name $APPSERVICE_NAME --resource-group $RESOURCE_GROUP --setting-names AZURE_SQL_CONNECTIONSTRING
+# Define your parameters (replace placeholders with actual values)
+$LOCATION      = "westus3"
+$BASE_NAME     = "<your-base-name>"         # e.g., "mikewebapp"
+$RESOURCE_GROUP = "<your-group-name>"        # e.g., "mikeresourcegp"
+$APPSERVICE_NAME = "app-$BASE_NAME"           # e.g., "app-mikewebapp"
 
-   # Install Service Connector
-   az extension add --name serviceconnector-passwordless --upgrade
+# Retrieve resource IDs from previous deployments
+$RESOURCEID_DATABASE = az deployment group show `
+    -g $RESOURCE_GROUP `
+    -n databaseDeploy `
+    --query properties.outputs.databaseResourceId.value `
+    -o tsv
 
-   # Set up the secure connection
-   az webapp connection create sql --connection sql_adventureconn --source-id $RESOURCEID_WEBAPP --target-id $RESOURCEID_DATABASE --client-type dotnet --user-identity client-id=$USER_IDENTITY_WEBAPP_CLIENTID subs-id=$USER_IDENTITY_WEBAPP_SUBSCRIPTION
+$RESOURCEID_WEBAPP = az deployment group show `
+    -g $RESOURCE_GROUP `
+    -n webappDeploy `
+    --query properties.outputs.appServiceResourceId.value `
+    -o tsv
+
+$USER_IDENTITY_WEBAPP_CLIENTID = az deployment group show `
+    -g $RESOURCE_GROUP `
+    -n webappDeploy `
+    --query properties.outputs.appServiceIdentity.value `
+    -o tsv
+
+$USER_IDENTITY_WEBAPP_SUBSCRIPTION = az deployment group show `
+    -g $RESOURCE_GROUP `
+    -n webappDeploy `
+    --query properties.outputs.appServiceIdentitySubscriptionId.value `
+    -o tsv
+
+# Output retrieved values for verification
+Write-Host "App Service Name: $APPSERVICE_NAME"
+Write-Host "Database Resource ID: $RESOURCEID_DATABASE"
+Write-Host "WebApp Resource ID: $RESOURCEID_WEBAPP"
+Write-Host "WebApp Client Identity: $USER_IDENTITY_WEBAPP_CLIENTID"
+Write-Host "WebApp Subscription ID: $USER_IDENTITY_WEBAPP_SUBSCRIPTION"
+
+# (Optional) Delete the old connection string
+az webapp config appsettings delete `
+    --name $APPSERVICE_NAME `
+    --resource-group $RESOURCE_GROUP `
+    --setting-names AZURE_SQL_CONNECTIONSTRING
+
+# Install (or upgrade) the Service Connector extension
+az extension add --name serviceconnector-passwordless --upgrade
+
+# Set up the secure connection between the WebApp and the Database
+az webapp connection create sql `
+    --connection sql_adventureconn `
+    --source-id $RESOURCEID_WEBAPP `
+    --target-id $RESOURCEID_DATABASE `
+    --client-type dotnet `
+    --user-identity "client-id=$USER_IDENTITY_WEBAPP_CLIENTID subs-id=$USER_IDENTITY_WEBAPP_SUBSCRIPTION"
+
+
    ```
    👉 This replaces the old database connection method with a **more secure** approach.
 
@@ -112,8 +173,11 @@ Right now, your web app connects to the database using a **connection string** (
 To **avoid being charged** for unused resources, delete everything when you're finished testing.  
 
 Run this command:  
-```bash
-az group delete --name $RESOURCE_GROUP -y
+```PowerShell
+
+# Delete the resource group without prompting for confirmation
+az group delete --name $RESOURCE_GROUP --yes
+
 ```
 👉 This removes all the resources you created on Azure.
 
